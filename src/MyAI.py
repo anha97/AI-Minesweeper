@@ -23,12 +23,15 @@ totalTiles = 0
 class Tile:
 	
 	def __init__(self):
+
+
 		self.visited = False
 		self.covered = True
 		self.marked = False
 		self.label = 0
 		self.effectiveLabel = 0
 		self.markedNeighbor = 0
+
 
 class MyAI( AI ):
 
@@ -47,6 +50,7 @@ class MyAI( AI ):
 		self.board[startX][startY].visited = True
 		self.board[startX][startY].covered = False
 
+
 	def position(self, x, y):
 		return (x < 10 and x > 0 and y < 10 and y > 0)
 	
@@ -63,6 +67,7 @@ class MyAI( AI ):
 		return result
 		
 	def getAction(self, number: int) -> "Action Object":
+
 		# number = number of mines in the neighborhood
 
 		# Action for the AI
@@ -82,8 +87,4 @@ class MyAI( AI ):
 		# LEAVE if we meet the game condition	
 		if self.coveredTiles == self.totalTiles:
                         return Action(AI.Action.LEAVE)
-
-
-
-
 
