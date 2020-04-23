@@ -15,16 +15,17 @@
 from AI import AI
 from Action import Action
 
-totalFlag = 0
-mineTotal = 0
-numOfUncovered = 0
-totalTiles = 0
-
+# A helper class to help keep track of individual
+# tiles in the Minesweeper board. Each object keeps
+# track of various metrics, such as the label, effective
+# label, and if the tile has been visited, covered, or
+# marked. Position on the board is denoted by the tile's
+# index into the 2D board array that our agent maintains.
+#
+# Example: self.board[5][7] <==> Tile at (5,7)
 class Tile:
 	
 	def __init__(self):
-
-
 		self.visited = False
 		self.covered = True
 		self.marked = False
@@ -35,36 +36,52 @@ class Tile:
 
 class MyAI( AI ):
 
-	def __init__(self, rowDimension, colDimension, totalMines, startX, startY):
+	def __init__(self, rowDimension: int, colDimension: int, totalMines: int, startX: int, startY: int):
+
 		# Set up board
 		self.board = [[Tile()] * (colDimension) for _ in range(rowDimension)]
 
-		# Set up vars
-		self.totalTiles = rowDimension * colDimension
+		# Declare vars
 		self.mineTotal = totalMines
 		self.rowDimension = rowDimension
 		self.colDimension = colDimension
-
+		self.totalTiles = self.rowDimension * self.colDimension
 		self.x = startX
 		self.y = startY
-		self.board[startX][startY].visited = True
-		self.board[startX][startY].covered = False
+
+		# Update our board at the first tile
+		self.board[self.x][self.y].visited = True
+		self.board[self.x][self.y].covered = False
+		self.board[self.x][self.y].label = 0
 
 
-	def position(self, x, y):
-		return (x < 10 and x > 0 and y < 10 and y > 0)
+	def isValidCoordinates(self, x: int, y: int) -> bool:
+		"""Returns True if (x,y) are valid coordinates, False otherwise."""
+		return (x < self.rowDimension and x > 0 and y < self.colDimension and y > 0)
 	
-	def neighbor(self, x, y):
-		result = list()
-		if self.position(x, y - 1):	# Check for left neighbor
-			result.append((x, y - 1))
-		if self.position(x - 1, y):	# Check for bottom neighbor
-			result.append((x - 1, y))
-		if self.position(x, y + 1):	# Check for right neighbor
-			result.append((x, y + 1))
-		if self.position(x + 1, y):	# Check for top neighbor
-			result.append((x + 1, y))
-		return result
+	def generateNeighbors(self, x: int, y: int) -> [(int,int)]:
+		"""Generates all valid neighbor coordinates of a tile given coordinates (x,y)."""
+
+		validNeighbors = list()
+
+		if self.isValidCoordinates(x - 1, y - 1): # Top-left neighbor
+			validNeighbors.append((x - 1, y - 1))
+		if self.isValidCoordinates(x, y - 1): # Top neighbor
+			validNeighbors.append((x, y - 1))
+		if self.isValidCoordinates(x + 1, y - 1): # Top-right neighbor
+			validNeighbors.append((x + 1, y - 1))
+		if self.isValidCoordinates(x - 1, y): # Left neighbor
+			validNeighbors.append((x - 1, y))
+		if self.isValidCoordinates(x + 1, y): # Right neighbor
+			validNeighbors.append((x+1, y))
+		if self.isValidCoordinates(x - 1, y + 1): # Bottom-left neighbor
+			validNeighbors.append((x - 1, y + 1))
+		if self.isValidCoordinates(x, y + 1): # Bottom neighbor
+			validNeighbors.append((x, y + 1))
+		if self.isValidCoordinates(x + 1, y + 1): # Bottom-right neighbor
+			validNeighbors.append((x + 1, y + 1))
+
+		return validNeighbors
 		
 	def getAction(self, number: int) -> "Action Object":
 
