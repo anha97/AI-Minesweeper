@@ -14,6 +14,7 @@
 
 from AI import AI
 from Action import Action
+# from time import ?
 
 # A helper class to help keep track of individual
 # tiles in the Minesweeper board. Each object keeps
@@ -31,7 +32,8 @@ class Tile:
 		self.marked = False
 		self.label = 0
 		self.effectiveLabel = 0
-		self.markedNeighbor = 0
+		self.markedNeighbors = 0
+		self.unmarkedNeighbors = 0
 
 
 class MyAI( AI ):
@@ -82,17 +84,63 @@ class MyAI( AI ):
 			validNeighbors.append((x + 1, y + 1))
 
 		return validNeighbors
+
+
+	def calculateEffectiveLabel(self, x: int, y: int) -> None:
+		"""Calculates the effective label of tile (x,y) and updates the board)"""
+		currentTile = self.board[x][y]
+		neighbors = generateNeighbors(x, y)
+
+		for _x, _y in neighbors:
+			if self.board[_x][_y].marked:
+				currentTile.markedNeighbors += 1
+			else:
+				currentTile.unmarkedNeighbors += 1
+
+		if currentTile.markedNeighbors != 0:
+			currentTile.effectiveLabel = currentTile.label - currentTile.markedNeighbors
+
+	def firstRuleOfThumb(self, x: int, y: int) -> bool:
+
+		tile = self.board[x][y]
+
+		self.calculateEffectiveLabel(self.x, self.y)
+
+		if tile.effectiveLabel == tile.unmarkedNeighbors:
+				
+		
 		
 	def getAction(self, number: int) -> "Action Object":
-
-		# number = number of mines in the neighborhood
+		"""
+		Based on the label provided for the last tile we visited, the agent
+		computes the next action to perform. The argument number is the label.
+		"""
 
 		# Action for the AI
 		action = ""
+
+		# Reference to last tile uncovered
+		lastTile = self.board[self.x][self.y]
+
 		# Calculate the amount of covered tiles	
 		self.coveredTiles = sum([sum([1 for tile in self.board[row] if tile.covered == True]) for row in range(self.rowDimension)])
 
-		result = self.neighbor(self.x, self.y)
+		# LEAVE if we meet the game condition	
+		if self.coveredTiles == self.totalTiles:
+                        return Action(AI.Action.LEAVE)
+		
+		# Run our first rule of thumb until board doesn't change anymore
+		while (true) {
+
+
+		}	
+
+
+
+
+
+
+
 		if number == 0:	# No mines around the neighborhood
 			# Need to check the neighbor before making a move
 			
@@ -100,8 +148,4 @@ class MyAI( AI ):
 			coordX = 0
 			coordY = 0
 			return Action(action, coordX, coordY)
-
-		# LEAVE if we meet the game condition	
-		if self.coveredTiles == self.totalTiles:
-                        return Action(AI.Action.LEAVE)
 
