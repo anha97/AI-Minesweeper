@@ -16,6 +16,8 @@ from AI import AI
 from Action import Action
 # from time import ?
 
+queueOfZero = []	# Keep track of tiles that have a label of 0 only
+
 # A helper class to help keep track of individual
 # tiles in the Minesweeper board. Each object keeps
 # track of various metrics, such as the label, effective
@@ -89,7 +91,7 @@ class MyAI( AI ):
 	def calculateEffectiveLabel(self, x: int, y: int) -> None:
 		"""Calculates the effective label of tile (x,y) and updates the board)"""
 		currentTile = self.board[x][y]
-		neighbors = generateNeighbors(x, y)
+		neighbors = self.generateNeighbors(x, y)
 
 		for _x, _y in neighbors:
 			if self.board[_x][_y].marked:
@@ -101,12 +103,23 @@ class MyAI( AI ):
 			currentTile.effectiveLabel = currentTile.label - currentTile.markedNeighbors
 
 	def firstRuleOfThumb(self, x: int, y: int) -> bool:
-
+		change = False
 		tile = self.board[x][y]
 
 		self.calculateEffectiveLabel(self.x, self.y)
 
+		neighbors = list()
 		if tile.effectiveLabel == tile.unmarkedNeighbors:
+			# Find a tile(s) with Tile.visited == False to mark/flag
+			neighbors = self.generateNeighbors(self.x, self.y)
+			for _x, _y in neighbors:
+				if self.board[_x][_y].visited == False:
+					self.board[_x][_y].marked = True
+					# Generate neighbors (from the mine)
+					# Update the effective label from each neighbor?
+					self.firstRuleOfThumb(_x,_y)
+					change = True
+		return change
 				
 		
 		
@@ -130,22 +143,34 @@ class MyAI( AI ):
                         return Action(AI.Action.LEAVE)
 		
 		# Run our first rule of thumb until board doesn't change anymore
-		while (true) {
-
-
-		}	
-
-
-
+		while True:
+			if not self.firstRuleOfThumb(self.x, self.y):
+				break
+		
 
 
 
-
-		if number == 0:	# No mines around the neighborhood
+		if number == 0:	# No mines around the neighborhood (It's safe to uncover all adjacent tiles from this current tile)
 			# Need to check the neighbor before making a move
-			
+			neighbor = list()
+			neighbor = self.generateNeighbors(self.x, self.y)
+			# Append a list of (x,y) for queue so the AI will be able to perform UNCOVER action on "safe" tiles
+			for _x, _y in neighbor:
+				if self.board[_x][_y].visited == False and (_x, _y) not in queueOfZero:
+					queueOfZero.append((_x, _y))
+			# Update self.x and self.y for the chosen tile
+			self.x = queueOfZero[0][0]
+			self.y = queueOfZero[0][1]
+			# Update visisted and covered status	(We could update all adjacent tiles... maybe)
+			self.board[self.x][self.y].visited = True
+			self.board[self.x][self.y].covered = False
+			# Pop the first input out (FIFO)
+			queueOfZero.pop()
 			action = AI.Action.UNCOVER
-			coordX = 0
-			coordY = 0
-			return Action(action, coordX, coordY)
-
+			return Action(action, self.x, self.y)
+		else:	# There is/are mine(s) adjacent to this current tile
+			self.board[self.x][self.y].label = number
+			# Append a tile w/ label on a different queue?
+			if len(queueOfZero) != 0:	# Backtrack method I guess
+				# Probably keep uncover all "safe" tiles until there aren't anymore
+				pass
