@@ -14,6 +14,7 @@
 
 from AI import AI
 from Action import Action
+from random import choice
 # from time import ?
 
 queueOfZero = []	# Keep track of tiles that have a label of 0 only
@@ -147,9 +148,9 @@ class MyAI( AI ):
 
 
 
-        print("safe ({}): {}".format(len(self.safeToUncover), self.safeToUncover))
-        print("uncovered frontier ({}): {}".format(len(self.uncoveredFrontier), self.uncoveredFrontier))
-        print("covered frontier ({}): {}".format(len(self.coveredFrontier), self.coveredFrontier))
+        # print("safe ({}): {}".format(len(self.safeToUncover), self.safeToUncover))
+        # print("uncovered frontier ({}): {}".format(len(self.uncoveredFrontier), self.uncoveredFrontier))
+        # print("covered frontier ({}): {}".format(len(self.coveredFrontier), self.coveredFrontier))
 
         
         # FIRST RULE OF THUMB: Uncover a safe tile
@@ -160,6 +161,11 @@ class MyAI( AI ):
             return Action(AI.Action.UNCOVER, x, y)
 
         # SECOND RULE OF THUMB: QUERY KB ON EACH COVERED TILE IN FRONTIER
+        if len(self.coveredFrontier) == 1:
+            return Action(AI.Action.LEAVE)
 
+        rand_x, rand_y = choice(tuple(self.coveredFrontier))
+        self.coveredFrontier.remove((rand_x, rand_y))
+        return Action(AI.Action.UNCOVER, rand_x, rand_y)
         # Have yet to implement better logic
         return Action(AI.Action.LEAVE)
