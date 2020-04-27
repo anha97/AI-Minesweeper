@@ -55,6 +55,11 @@ class MyAI( AI ):
         # with a set of (x,y) coordinates
         self.safeToUncover = set()
 
+        # Keep track of our frontier, aka the nodes
+        # that separate the known from the unknown
+        self.uncoveredFrontier = set()
+        self.coveredFrontier = set()
+
         # Declare vars
         self.mineTotal = totalMines
         self.rowDimension = rowDimension
@@ -118,21 +123,43 @@ class MyAI( AI ):
         if self.coveredTiles == self.totalTiles:
             return Action(AI.Action.LEAVE)
 
+        # Update the board with the tile we just uncovered
+        lastTile.visited = True
+        lastTile.covered = False
+        lastTile.label = number
+
         # Add new safe tiles if we uncovered a tile with label 0
         if number == 0:
-            newSafeTiles = {(new_x, new_y) for new_x, new_y in self.generateNeighbors(self.x, self.y) if not self.board[new_x][new_y].visited}
-            self.safeToUncover = self.safeToUncover.union(newSafeTiles)
+            for x, y in self.generateNeighbors(self.x, self.y):
+                if not self.board[x][y].visited:
+                    if (x, y) in self.coveredFrontier:
+                        self.coveredFrontier.remove((x,y))
+                    self.safeToUncover.add((x,y))
 
-        print("safe: {}".format(self.safeToUncover))
+        # Add nodes to frontier if we uncovered a tile with a non-zero label
+        else:
+            # Add the node to the uncovered frontier set
+            self.uncoveredFrontier.add((self.x, self.y))
+
+            # Neighboring nodes that aren't safe or uncovered frontier nodes are covered frontier nodes
+            newCoveredFrontierTiles = {(x, y) for x, y in self.generateNeighbors(self.x, self.y) if not self.board[x][y].visited and (x, y) not in self.uncoveredFrontier and (x, y) not in self.safeToUncover}
+            self.coveredFrontier = self.coveredFrontier.union(newCoveredFrontierTiles)
+
+
+
+        print("safe ({}): {}".format(len(self.safeToUncover), self.safeToUncover))
+        print("uncovered frontier ({}): {}".format(len(self.uncoveredFrontier), self.uncoveredFrontier))
+        print("covered frontier ({}): {}".format(len(self.coveredFrontier), self.coveredFrontier))
+
         
         # FIRST RULE OF THUMB: Uncover a safe tile
         if self.safeToUncover:
             x, y = self.safeToUncover.pop()
-            self.board[x][y].visited = True
-            self.board[x][y].covered = False
             self.x = x
             self.y = y
             return Action(AI.Action.UNCOVER, x, y)
+
+        # SECOND RULE OF THUMB: QUERY KB ON EACH COVERED TILE IN FRONTIER
 
         # Have yet to implement better logic
         return Action(AI.Action.LEAVE)
