@@ -104,7 +104,13 @@ class MyAI( AI ):
 
         return validNeighbors				
         
-        
+    def getMarked(self, x, y):
+        numOfMarked = 0
+        for _x, _y in self.generateNeighbors(x, y):
+            if self.board[_x][_y].marked == True:
+                numOfMarked += 1
+        return numOfMarked
+
     def getAction(self, number: int) -> "Action Object":
         """
         Based on the label provided for the last tile we visited, the agent
@@ -119,7 +125,6 @@ class MyAI( AI ):
 
         # Calculate the amount of covered tiles	
         self.coveredTiles = sum([sum([1 for tile in self.board[row] if tile.covered == True]) for row in range(self.rowDimension)])
-
         # LEAVE if we meet the game condition	
         if self.coveredTiles == self.totalTiles:
             return Action(AI.Action.LEAVE)
@@ -148,9 +153,9 @@ class MyAI( AI ):
 
 
 
-        print("safe ({}): {}".format(len(self.safeToUncover), self.safeToUncover))
-        print("uncovered frontier ({}): {}".format(len(self.uncoveredFrontier), self.uncoveredFrontier))
-        print("covered frontier ({}): {}".format(len(self.coveredFrontier), self.coveredFrontier))
+        # print("safe ({}): {}".format(len(self.safeToUncover), self.safeToUncover))
+        # print("uncovered frontier ({}): {}".format(len(self.uncoveredFrontier), self.uncoveredFrontier))
+        # print("covered frontier ({}): {}".format(len(self.coveredFrontier), self.coveredFrontier))
 
         
         # FIRST RULE OF THUMB: Uncover a safe tile
@@ -162,6 +167,7 @@ class MyAI( AI ):
 
         # SECOND RULE OF THUMB: Check if any uncovered frontier nodes
         # have just one unvisited neighbor
+        # You need to consider to update frontier after flagging <-------------------------------------------------
         for x, y in self.uncoveredFrontier:
             unvisited_neighbor_count = 0
             unvisited_neighbor = None
@@ -171,14 +177,30 @@ class MyAI( AI ):
                     unvisited_neighbor = (x2, y2)
             if unvisited_neighbor_count == 1:
                 x3, y3 = unvisited_neighbor
+                if self.board[x3][y3].marked:
+                    continue
                 self.board[x3][y3].marked = True
                 if (x3, y3) in self.coveredFrontier:
                     self.coveredFrontier.remove((x3, y3))
                 self.uncoveredFrontier.remove((x, y))
                 return Action(AI.Action.FLAG, x3, y3)
 
-        # THIRD RULE OF THUMB: Calcu
-
+        # THIRD RULE OF THUMB: Calculate effective label
+        for x, y in self.uncoveredFrontier:
+            self.board[x][y].markedNeighbors = self.getMarked(x, y)
+            self.board[x][y].effectiveLabel = self.board[x][y].label - self.board[x][y].markedNeighbors
+            if self.board[x][y].effectiveLabel == 0:
+                # Update self.safeToUncover
+                for _x, _y in self.generateNeighbors(x, y):
+                    if self.board[_x][_y].covered == True and self.board[_x][_y].marked == False:
+                        self.board[_x][_y].covered = False
+                        self.board[_x][_y].visited = True
+                        if (_x, _y) in self.coveredFrontier:
+                            self.coveredFrontier.remove((_x, _y))
+                            self.uncoveredFrontier.add((_x, _y))
+                        self.x = _x
+                        self.y = _y
+                        return Action(AI.Action.UNCOVER, _x, _y)
 
 
         # Have yet to implement better logic
