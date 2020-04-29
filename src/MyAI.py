@@ -148,9 +148,9 @@ class MyAI( AI ):
 
 
 
-        # print("safe ({}): {}".format(len(self.safeToUncover), self.safeToUncover))
-        # print("uncovered frontier ({}): {}".format(len(self.uncoveredFrontier), self.uncoveredFrontier))
-        # print("covered frontier ({}): {}".format(len(self.coveredFrontier), self.coveredFrontier))
+        print("safe ({}): {}".format(len(self.safeToUncover), self.safeToUncover))
+        print("uncovered frontier ({}): {}".format(len(self.uncoveredFrontier), self.uncoveredFrontier))
+        print("covered frontier ({}): {}".format(len(self.coveredFrontier), self.coveredFrontier))
 
         
         # FIRST RULE OF THUMB: Uncover a safe tile
@@ -160,12 +160,26 @@ class MyAI( AI ):
             self.y = y
             return Action(AI.Action.UNCOVER, x, y)
 
-        # SECOND RULE OF THUMB: QUERY KB ON EACH COVERED TILE IN FRONTIER
-        if len(self.coveredFrontier) == 1:
-            return Action(AI.Action.LEAVE)
+        # SECOND RULE OF THUMB: Check if any uncovered frontier nodes
+        # have just one unvisited neighbor
+        for x, y in self.uncoveredFrontier:
+            unvisited_neighbor_count = 0
+            unvisited_neighbor = None
+            for x2, y2 in self.generateNeighbors(x, y):
+                if not self.board[x2][y2].visited:
+                    unvisited_neighbor_count += 1
+                    unvisited_neighbor = (x2, y2)
+            if unvisited_neighbor_count == 1:
+                x3, y3 = unvisited_neighbor
+                self.board[x3][y3].marked = True
+                if (x3, y3) in self.coveredFrontier:
+                    self.coveredFrontier.remove((x3, y3))
+                self.uncoveredFrontier.remove((x, y))
+                return Action(AI.Action.FLAG, x3, y3)
 
-        rand_x, rand_y = choice(tuple(self.coveredFrontier))
-        self.coveredFrontier.remove((rand_x, rand_y))
-        return Action(AI.Action.UNCOVER, rand_x, rand_y)
+        # THIRD RULE OF THUMB: Calcu
+
+
+
         # Have yet to implement better logic
         return Action(AI.Action.LEAVE)
