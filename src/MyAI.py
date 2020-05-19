@@ -15,7 +15,6 @@
 from AI import AI
 from Action import Action
 from random import choice
-# from time import ?
 
 queueOfZero = []	# Keep track of tiles that have a label of 0 only
 
@@ -83,7 +82,6 @@ class MyAI( AI ):
 
     def generateNeighbors(self, x: int, y: int) -> [(int,int)]:
         """Generates all valid neighbor coordinates of a tile given coordinates (x,y)."""
-
         validNeighbors = []
 
         if self.isValidCoordinates(x - 1, y - 1): # Top-left neighbor
@@ -105,35 +103,39 @@ class MyAI( AI ):
 
         return validNeighbors
         
-    def removeUncovered(self):
+    def removeUncovered(self) -> None:
+        """Removes all tiles from the uncovered frontier if their effective label is 0 and they have no unmarked neighbors."""
         removeList = []
-        foundRemove = False
+
+        # Iterate through the uncovered frontier
         for x, y in self.uncoveredFrontier:
             if self.board[x][y].effectiveLabel == 0 and self.board[x][y].unmarkedNeighbors == 0:
                 removeList.append((x,y))
-                foundRemove = True
-        if foundRemove:
+
+        # Remove tiles if there are any
+        if removeList:
             for x, y in removeList:
-                print("Removing", x + 1, ",", y + 1)
                 self.uncoveredFrontier.remove((x, y))
 
-    def removeCovered(self):
-        foundRemove = False
+    def removeCovered(self) -> None:
+        """Removes all tiles from the covered frontier if they have already been visited/flagged, as well as their neighbors."""
         removeList = []
+
+        # Iterate through the covered frontier, as well as their neighbors
         for x, y in self.coveredFrontier:
             if self.board[x][y].marked or self.board[x][y].visited:
                 removeList.append((x,y))
-                foundRemove = True
             for x2, y2 in self.generateNeighbors(x, y):
                 if self.board[x2][y2].visited and self.board[x2][y2].label != 0 and self.board[x2][y2].unmarkedNeighbors == 0:
                     removeList.append((x2,y2))
-                    foundRemove = True
-        if foundRemove:
+
+        # Remove tiles if there are any
+        if removeList:
             for x, y in removeList:
                 if (x, y) in self.coveredFrontier:
                     self.coveredFrontier.remove((x,y))
         
-    def getMarked(self, x, y):
+    def getMarked(self, x: int, y: int) -> None:
         numOfMarked = 0
         for _x, _y in self.generateNeighbors(x, y):
             if self.board[_x][_y].marked == True:
@@ -145,9 +147,6 @@ class MyAI( AI ):
         Based on the label provided for the last tile we visited, the agent
         computes the next action to perform. The argument number is the label.
         """
-        
-        # Action for the AI
-        action = ""
 
         # Reference to last tile uncovered
         lastTile = self.board[self.x][self.y]
@@ -163,7 +162,7 @@ class MyAI( AI ):
         lastTile.covered = False
         lastTile.label = number
 
-        # Remove unecessary tiles (Tiles that have no possible moves left or tiles whose neighbors are all visited)
+        # Remove unecessary tiles from the frontier (Tiles that have no possible moves left or tiles whose neighbors are all visited)
         self.removeUncovered()
         self.removeCovered()
 
@@ -184,74 +183,94 @@ class MyAI( AI ):
                 elif self.board[x2][y2].marked:
                     self.board[self.x][self.y].markedNeighbors += 1
             self.board[self.x][self.y].effectiveLabel = self.board[self.x][self.y].label - self.board[self.x][self.y].markedNeighbors
+
             # Add the node to the uncovered frontier set
             self.uncoveredFrontier.add((self.x, self.y))
-
 
             # Neighboring nodes that aren't safe or uncovered frontier nodes are covered frontier nodes
             newCoveredFrontierTiles = {(x, y) for x, y in self.generateNeighbors(self.x, self.y) if not self.board[x][y].visited and (x, y) not in self.uncoveredFrontier and (x, y) not in self.safeToUncover}
             self.coveredFrontier = self.coveredFrontier.union(newCoveredFrontierTiles)
 
 
-
-        print("safe ({}): {}".format(len(self.safeToUncover), self.safeToUncover))
+        # --------- DEBUG --------------
+        # print("safe ({}): {}".format(len(self.safeToUncover), self.safeToUncover))
         # print("uncovered frontier ({}): {}".format(len(self.uncoveredFrontier), self.uncoveredFrontier))
-        print("covered frontier ({}): {}".format(len(self.coveredFrontier), self.coveredFrontier))
+        # print("covered frontier ({}): {}".format(len(self.coveredFrontier), self.coveredFrontier))
+        # --------- DEBUG --------------
+
 
         # FIRST RULE OF THUMB: Uncover a safe tile
         if self.safeToUncover:
             x, y = self.safeToUncover.pop()
             self.x = x
             self.y = y
+
             # Update the uncovered tiles (whose label is not 0) that are adjacent to the current tile (tile w/ label 0)
             for x2, y2 in self.generateNeighbors(x, y):
                 if self.board[x2][y2].label != 0:
                     if self.board[x2][y2].unmarkedNeighbors > 0:
                         self.board[x2][y2].unmarkedNeighbors -= 1
+
             return Action(AI.Action.UNCOVER, x, y)
 
-        # THIRD RULE OF THUMB: Calculate effective label
+
+        # SECOND RULE OF THUMB: Calculate effective label
         for x, y in self.uncoveredFrontier:
+
             # All the unmarked tiles are safe to uncover
             if self.board[x][y].effectiveLabel == 0:
                 for _x, _y in self.generateNeighbors(x, y):
                     if self.board[_x][_y].covered == True and self.board[_x][_y].marked == False:
+
                         self.board[_x][_y].covered = False
                         self.board[_x][_y].visited = True
+
                         if (_x, _y) in self.coveredFrontier:
                             self.coveredFrontier.remove((_x, _y))
+
                         self.x = _x
                         self.y = _y
+
                         # Generate the neighbors from the tile with effectiveLabel == 0 and update variables
                         for x2, y2 in self.generateNeighbors(_x, _y):
                             if self.board[x2][y2].label != 0 and self.board[x2][y2].visited:
                                 if self.board[x2][y2].unmarkedNeighbors > 0:
                                     self.board[x2][y2].unmarkedNeighbors -= 1
-                        return Action(AI.Action.UNCOVER, _x, _y)
-            # All adjacent tiles to the current tile are mines
-            elif self.board[x][y].effectiveLabel == self.board[x][y].unmarkedNeighbors:  # All the adjacent tiles to [x][y] are mines...
-                unvisited_neighbor = []
 
+                        return Action(AI.Action.UNCOVER, _x, _y)
+
+            # All adjacent tiles to the current tile are mines
+            elif self.board[x][y].effectiveLabel == self.board[x][y].unmarkedNeighbors:
+
+                # unvisitedNeighbors is a list that holds all of the unvisited neighbors of (x,y)
+                unvisitedNeighbors = []
                 # changeList is used to prevent the AI from not to update variables (same tile) again
                 changeList = []
                 # change is a boolean variable that notify the AI whether the (x, y) has changed or not (It should not uncover the previous move again; otherwise it would unnecessarily update the previous tile at the beginning (Line 178))
                 change = False
 
+                # Calculate all of the unvisited neighbors
                 for x2, y2 in self.generateNeighbors(x, y):
                     if not self.board[x2][y2].visited:
-                        unvisited_neighbor.append((x2, y2))
-                for x3, y3 in unvisited_neighbor:
+                        unvisitedNeighbors.append((x2, y2))
+
+                for x3, y3 in unvisitedNeighbors:
                     if self.board[x3][y3].marked:
                         continue
+
                     self.board[x3][y3].marked = True
                     self.board[x3][y3].visited = True
+
                     # Update uncovered tiles that are adjacent to the mine
                     for x4, y4 in self.generateNeighbors(x3, y3):
                         if self.board[x4][y4].label != 0 and self.board[x4][y4].visited:
+
                             self.board[x4][y4].unmarkedNeighbors -= 1
                             self.board[x4][y4].markedNeighbors += 1
                             self.board[x4][y4].effectiveLabel = self.board[x4][y4].label - self.board[x4][y4].markedNeighbors
+
                             changeList.append((x4, y4))
+
                             if self.board[x4][y4].effectiveLabel == 0 and self.board[x4][y4].unmarkedNeighbors != 0:
                                 for newX, newY in self.generateNeighbors(x4, y4):
                                     if not self.board[newX][newY].visited and not self.board[newX][newY].marked:
@@ -261,22 +280,25 @@ class MyAI( AI ):
 
                     if (x3, y3) in self.coveredFrontier:
                         self.coveredFrontier.remove((x3, y3))
+
                     # self.flagTotal is for testing purpose (Ignore it; although I might use it depending on the situation)
                     self.flagTotal += 1
                 
                 # This if statement will prevent the AI from using the same previous move again
                 if not change:
                     continue
+
                 # Update the tiles that are not in changeList (Making sure not to update the same tiles as it did in line 248)
                 for x2, y2 in self.generateNeighbors(self.x, self.y):
                     if (x2, y2) not in changeList and self.board[x2][y2].label != 0 and self.board[x2][y2].visited and not self.board[self.x][self.y].visited:
                         self.board[x2][y2].unmarkedNeighbors -= 1
+
                 return Action(AI.Action.UNCOVER, self.x, self.y)
         
-        # This is the last rule of thumb: calculating the probability (If I can solve how to do this, I can include it in the for loop at line 213)
+
+        # THIRD RULE OF THUMB: Model checking
         # Update coveredFrontier, removing unnecessary tiles
         self.removeCovered()
-        print("covered frontier ({}): {}".format(len(self.coveredFrontier), self.coveredFrontier))
         
         # A storage for number of solutions (Not sure it should be a list)
         numOfSol = []
@@ -289,12 +311,11 @@ class MyAI( AI ):
                 if (x2, y2) in self.coveredFrontier:
                     if (x, y) not in validUncovered:
                         validUncovered.append((x,y))
-        print(validUncovered)
+
         # A solution...
         sol = []
         for x, y in validUncovered:
             break
 
-        # # Have yet to implement better logic
-        # print(self.x, self.y)
+        # Place-holder <----------------- make sure to remove this!
         return Action(AI.Action.LEAVE)
