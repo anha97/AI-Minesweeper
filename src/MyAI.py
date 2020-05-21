@@ -68,6 +68,9 @@ class MyAI( AI ):
         self.totalTiles = self.rowDimension * self.colDimension
         self.x = startX
         self.y = startY
+        
+        self.sol = dict()
+        self.invalid = dict()
 
         # Update our board at the first tile
         self.board[self.x][self.y].visited = True
@@ -142,6 +145,40 @@ class MyAI( AI ):
                 numOfMarked += 1
         return numOfMarked
 
+    def getSolution(self, x: int, y: int, coveredList: list, uncoveredList: list) -> None:
+        # Need to check for effectiveLabel when flagging tiles; you can't flag a tile if effectiveLabel == 0...
+        if len(coveredList) == 0:
+            return (x, y)
+
+        else:
+            change = False
+            changeList = []
+            x1, y1 = coveredList.pop()
+
+            # Check to make sure not to "flag" the other tiles that are adjacent to the tile that you picked
+            for newX, newY in self.generateNeighbors(x, y):
+                if (newX, newY) in coveredList:
+                    changeList.append((newX, newY))
+                    change = True
+                    break
+            if change:
+                for newX, newY in changeList:
+                    coveredList.remove((newX, newY))
+                if len(coveredList) != 0:
+                    x1, y1 = coveredList.pop()
+                else:
+                    return self.sol[(x, y)]
+
+            for newX, newY in self.generateNeighbors(x1, y1):
+                if (newX, newY) in coveredList:
+                    # This is where you will create two branches; flagging x1, y2 or other neighbor tiles
+                    duplList = coveredList.copy()
+                    duplList.remove((x1, y1))
+                    self.sol[(x, y)].append(self.getSolution(x, y, duplList, uncoveredList))
+                    coveredList.remove((newX, newY))
+            
+            return self.sol[(x,y)].append(self.getSolution(x, y, coveredList, uncoveredList))
+
     def getAction(self, number: int) -> "Action Object":
         """
         Based on the label provided for the last tile we visited, the agent
@@ -155,6 +192,9 @@ class MyAI( AI ):
         self.coveredTiles = sum([sum([1 for tile in self.board[row] if tile.covered == True]) for row in range(self.rowDimension)])
         # LEAVE if we meet the game condition	
         if self.coveredTiles == self.totalTiles:
+            return Action(AI.Action.LEAVE)
+        
+        if self.flagTotal == self.mineTotal:
             return Action(AI.Action.LEAVE)
 
         # Update the board with the tile we just uncovered
@@ -300,8 +340,8 @@ class MyAI( AI ):
         # Update coveredFrontier, removing unnecessary tiles
         self.removeCovered()
         
-        # A storage for number of solutions (Not sure it should be a list)
-        numOfSol = []
+        #A storage for number of solutions (Not sure it should be a list)
+        numOfSol = dict()
         # Find a way to determine a solution (Finding a possible move to flag a mine)
         
         # Find the uncovered tiles that are adjacent to covered tiles in coveredFrontier (Sometimes there are some uncovered tiles that didn't get removed from uncoveredFrontier (Not sure why))
@@ -313,9 +353,52 @@ class MyAI( AI ):
                         validUncovered.append((x,y))
 
         # A solution...
-        sol = []
+        print("covered frontier ({}): {}".format(len(self.coveredFrontier), self.coveredFrontier))
+        validUncovered.sort()
+        print(validUncovered)
+
+        small = 8
         for x, y in validUncovered:
-            break
+            if small > self.board[x][y].unmarkedNeighbors:
+                small = self.board[x][y].unmarkedNeighbors
+        for x, y in validUncovered:
+            if small == self.board[x][y].unmarkedNeighbors:
+                validX = x
+                validY = y
+                break
+
+        validUncovered.remove((validX, validY))
+        print(validUncovered)
+        print(validUncovered)
+        numOfNeigh = []
+
+        for x, y in self.generateNeighbors(validX, validY):
+            if (x, y) in self.coveredFrontier:
+                numOfNeigh.append((x, y))
+        numOfNeigh.sort()
+        print(numOfNeigh)
+        #result = list(set(self.coveredFrontier) ^ set(numOfNeigh))
+        for x, y in numOfNeigh:
+            duplicateList = self.coveredFrontier.copy()
+            self.sol[(x, y)] = list()
+            duplicateList.remove((x,y))
+            self.getSolution(x, y, duplicateList, validUncovered)
+
+        for key, value in self.sol.items():
+            if len(value) == 0:
+                numOfSol[key] = 1
+            else:
+                numOfSol[key] = len(value)
+
+        min_val =  min(numOfSol.values())
+
+        result = [key for key, value in numOfSol.items() if value == min_val]
+        # print(result)
+            # for x2, y2 in result:
+            #     break
+
+
 
         # Place-holder <----------------- make sure to remove this!
+
         return Action(AI.Action.LEAVE)
