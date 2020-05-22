@@ -328,5 +328,13 @@ class MyAI( AI ):
                         # Finally, return the flag action
                         return Action(AI.Action.FLAG, x2, y2)
 
+        
+        # FOURTH RULE OF THUMB: Guess (as of now)
+        for x, y in self.coveredFrontier:
+            self.x = x
+            self.y = y
+            return Action(AI.Action.UNCOVER, x, y)
+
+
         # Place-holder <----------------- make sure to remove this!
         return Action(AI.Action.LEAVE)
