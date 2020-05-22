@@ -115,6 +115,66 @@ class MyAI( AI ):
                 numOfMarked += 1
         return numOfMarked
 
+    def getAdjacentCoveredFrontierSet(self, tile_y: int, tile_x: int, tiles: set) -> set:
+        """
+            Recursively generates a subset of the covered frontier for us to model check.
+            All tiles must be adjacent to each other, and the set must not exceed a size of 10,
+            as so to limit the computational complexity of model checking.
+        """
+        if len(tiles) == 10:
+            return tiles
+
+        tiles.add((tile_y, tile_x))
+        
+        for y, x in self.generateNeighbors(tile_y, tile_x):
+            if (y, x) not in tiles and (y, x) in self.coveredFrontier:
+                self.getAdjacentCoveredFrontierSet(y, x, tiles)
+
+        return tiles
+
+    def getCorrespondingUncoveredFrontierSet(self, covered_adjacent_tiles: set) -> set:
+        """Generates all tiles adjacent to the covered frontier subset computed by self.getAdjacentCoveredFrontierSet()."""
+        tiles = set()
+        for y, x in self.uncoveredFrontier:
+            for y2, x2 in covered_adjacent_tiles:
+                if (y2, x2) in self.generateNeighbors(y, x):
+                    tiles.add((y, x))
+        return tiles
+
+    def generateConsistentModels(self, currentModel: dict, uncoveredFrontierSet: set) -> list:
+        """Recursively generates all consistent models given a subset of adjacent covered frontier nodes and its uncovered frontier neighbors."""
+        consistentModels = []
+
+        # Base case: all tiles are assigned a value of either 0(no bomb) or 1(has bomb)
+        if all([True if value != None else False for value in currentModel.values()]):
+
+            # Determine if the model is consistent (need to do this)
+            if True:
+                consistentModels.append(currentModel)
+
+            return consistentModels
+            
+        # Create a copy of the currentModel (to edit)
+        currentModelCopy = dict(currentModel)
+
+        # Assign a value for a tile that hasn't been assigned yet
+        for tile, value in currentModelCopy.items():
+
+            if value == None:
+
+                # Recurse for the 0 case
+                currentModelCopy[tile] = 0
+                consistentModels += self.generateConsistentModels(currentModelCopy, uncoveredFrontierSet)
+
+                # Recurse for the 1 case
+                currentModelCopy[tile] = 1
+                consistentModels += self.generateConsistentModels(currentModelCopy, uncoveredFrontierSet)
+                
+                # Break the loop
+                break
+
+        return consistentModels
+
     def getAction(self, number: int) -> "Action Object":
         """
         Based on the label provided for the last tile we visited, the agent
@@ -183,16 +243,16 @@ class MyAI( AI ):
             newCoveredFrontierTiles = {(y, x) for y, x in self.generateNeighbors(self.y, self.x) if not self.board[y][x].visited and not self.board[y][x].marked and (y, x) not in self.uncoveredFrontier and (y, x) not in self.safeToUncover}
             self.coveredFrontier = self.coveredFrontier.union(newCoveredFrontierTiles)
 
-         # ------- PRE-WORK ------------
+        # ------- PRE-WORK ------------
 
 
         # --------- DEBUG --------------
 
-        # print("\nnumber = {}".format(number))
-        # print("coveredTiles = {}\nmineTotal = {}".format(self.coveredTiles, self.mineTotal))
-        # print("safe ({}): {}".format(len(self.safeToUncover), self.safeToUncover))
-        # print("uncovered frontier ({}): {}".format(len(self.uncoveredFrontier), self.uncoveredFrontier))
-        # print("covered frontier ({}): {}\n".format(len(self.coveredFrontier), self.coveredFrontier))
+        print("\nnumber = {}".format(number))
+        print("coveredTiles = {}\nmineTotal = {}".format(self.coveredTiles, self.mineTotal))
+        print("safe ({}): {}".format(len(self.safeToUncover), self.safeToUncover))
+        print("uncovered frontier ({}): {}".format(len(self.uncoveredFrontier), self.uncoveredFrontier))
+        print("covered frontier ({}): {}\n".format(len(self.coveredFrontier), self.coveredFrontier))
 
         # --------- DEBUG --------------
 
@@ -286,6 +346,25 @@ class MyAI( AI ):
                         # Finally, return the flag action
                         return Action(AI.Action.FLAG, x2, y2)
 
+
+        for test_y, test_x in self.coveredFrontier:
+
+            print("Testing model checking!\n")
+
+            print("Generating a subset of adjacent covered frontier tiles (10 or less)...")
+            coveredTest = set()    
+            coveredTest = self.getAdjacentCoveredFrontierSet(test_y, test_x, coveredTest)
+            print("covered subset({}): {}\n".format(len(coveredTest), coveredTest))
+
+            print("Generating all of the uncovered frontier neighbors of the adjacent covered frontier subset...")
+            uncoveredTest = self.getCorrespondingUncoveredFrontierSet(coveredTest)
+            print("uncovered subset({}): {}\n".format(len(uncoveredTest), uncoveredTest))
+
+            print("Computing all of the consistent models...")
+            consistentModelsTest = self.generateConsistentModels({tile : None for tile in coveredTest}, uncoveredTest)
+            print("length of consistent models dict: {}\n".format(len(consistentModelsTest)))
+            # print("consistent models({}): {}\n".format(len(consistentModelsTest), consistentModelsTest))
+            break
         
         # FOURTH RULE OF THUMB: Guess (as of now)
         for y, x in self.coveredFrontier:
