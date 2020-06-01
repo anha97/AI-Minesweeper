@@ -138,6 +138,22 @@ class MyAI( AI ):
                     tiles.add((y, x))
         return tiles
 
+    def isModelConsistent(self, model: dict, uncoveredFrontierSet: set) -> bool:
+        """Given a model, returns True if a model is consistent with the uncovered frontier set provided, otherwise it returns False."""
+        actual = {(y,x) : self.board[y][x].effectiveLabel for y, x in uncoveredFrontierSet}
+        given = {(y,x) : 0 for y, x in uncoveredFrontierSet}
+
+        for tile, value in model.items():
+            # If there is a bomb, increment the count for each neighboring tile in the uncovered frontier set
+            if value == 1:
+                neighbors = self.generateNeighbors(tile[0], tile[1])
+                for uncovered_tile in uncoveredFrontierSet:
+                    if uncovered_tile in neighbors:
+                        given[uncovered_tile] += 1
+
+        # print("actual: ", actual, "\ngiven: ", given)
+        return actual == given
+
     def generateConsistentModels(self, currentModel: dict, uncoveredFrontierSet: set) -> list:
         """Recursively generates all consistent models given a subset of adjacent covered frontier nodes and its uncovered frontier neighbors."""
         consistentModels = []
@@ -146,7 +162,7 @@ class MyAI( AI ):
         if all([True if value != None else False for value in currentModel.values()]):
 
             # Determine if the model is consistent (need to do this)
-            if True:
+            if self.isModelConsistent(currentModel, uncoveredFrontierSet):
                 consistentModels.append(currentModel)
 
             return consistentModels
@@ -171,6 +187,22 @@ class MyAI( AI ):
                 break
 
         return consistentModels
+
+    def calculateProbabilitiesOfConsistentModels(self, coveredTiles: set, consistentModels: list) -> dict:
+        """Returns a dictionary of each tile with a value of the probability that it appears in each consistent model."""
+        totalModels = len(consistentModels)
+
+        # Create a dictionary with the key as the tile and the value as the count of how many times it is a bomb
+        counts = {tile : 0 for tile in coveredTiles}
+
+        # Count all the tiles a tile is a bomb
+        for model in consistentModels:
+            for tile, value in model.items():
+                if value == 1:
+                    counts[tile] += 1
+
+        # Calculate the probabilities using the total model count
+        return {tile : count/totalModels for tile, count in counts.items()}
 
     def getAction(self, number: int) -> "Action Object":
         """
@@ -341,31 +373,67 @@ class MyAI( AI ):
                         return Action(AI.Action.FLAG, x2, y2)
 
 
-        for test_y, test_x in self.coveredFrontier:
+        # for test_y, test_x in self.coveredFrontier:
 
-            print("Testing model checking!\n")
+        #     print("Testing model checking!\n")
 
-            print("Generating a subset of adjacent covered frontier tiles (10 or less)...")
-            coveredTest = set()    
-            coveredTest = self.getAdjacentCoveredFrontierSet(test_y, test_x, coveredTest)
-            print("covered subset({}): {}\n".format(len(coveredTest), coveredTest))
+        #     print("Generating a subset of adjacent covered frontier tiles (10 or less)...")
+        #     coveredTest = set()    
+        #     coveredTest = self.getAdjacentCoveredFrontierSet(test_y, test_x, coveredTest)
+        #     print("covered subset({}): {}\n".format(len(coveredTest), coveredTest))
 
-            print("Generating all of the uncovered frontier neighbors of the adjacent covered frontier subset...")
-            uncoveredTest = self.getCorrespondingUncoveredFrontierSet(coveredTest)
-            print("uncovered subset({}): {}\n".format(len(uncoveredTest), uncoveredTest))
+        #     print("Generating all of the uncovered frontier neighbors of the adjacent covered frontier subset...")
+        #     uncoveredTest = self.getCorrespondingUncoveredFrontierSet(coveredTest)
+        #     print("uncovered subset({}): {}\n".format(len(uncoveredTest), {(y,x) : self.board[y][x].label for y, x in uncoveredTest}))
 
-            print("Computing all of the consistent models...")
-            consistentModelsTest = self.generateConsistentModels({tile : None for tile in coveredTest}, uncoveredTest)
-            print("length of consistent models dict: {}\n".format(len(consistentModelsTest)))
-            # print("consistent models({}): {}\n".format(len(consistentModelsTest), consistentModelsTest))
-            break
+        #     print("Computing all of the consistent models...")
+        #     consistentModelsTest = self.generateConsistentModels({tile : None for tile in coveredTest}, uncoveredTest)
+        #     print("length of consistent models list: {}\n".format(len(consistentModelsTest)))
+        #     # print("consistent models({}): {}\n".format(len(consistentModelsTest), consistentModelsTest))
+            
         
-        # FOURTH RULE OF THUMB: Guess (as of now)
+        # FOURTH RULE OF THUMB: Model Checking
         for y, x in self.coveredFrontier:
-            self.x = x
-            self.y = y
+
+            # Generate a subset of adjacent covered frontier tiles (10 or less)
+            coveredSet = set()
+            coveredSet = self.getAdjacentCoveredFrontierSet(y, x, coveredSet)
+
+            # Generate all of the uncovered frontier neighbors of the adjacent covered frontier subset
+            uncoveredSet = self.getCorrespondingUncoveredFrontierSet(coveredSet)
+
+            # Compute all of the consistent models
+            consistentModels = self.generateConsistentModels({tile : None for tile in coveredSet}, uncoveredSet)
+
+            # Act if there are any consistent models from this subset
+            if consistentModels:
+        
+                # Calculate the probabilities that each tile in the covered subset is a tile in those models
+                probabilities = self.calculateProbabilitiesOfConsistentModels(coveredSet, consistentModels)
+                sortedProbabilities = sorted(probabilities.items(), key=(lambda x: x[1]))
+
+                print("sorted probabilities: ", sortedProbabilities)
+
+                # Iterate through the dict, sorting by ascending probabilities (thus the first element should be of the lowest probability)
+                for tile, probability in sortedProbabilities:
+
+                    # Get all the lowest probability tiles, and choose randomly out of them
+                    lowestProbabilityTiles = [tile2 for tile2, probability2 in sortedProbabilities if probability2 == probability]
+                    print("lowest tile: ", lowestProbabilityTiles)
+                    chosen_y, chosen_x = choice(lowestProbabilityTiles)
+                    print("Hi!")
+
+                    # Remove the tile from the covered frontier if it is in there
+                    if (chosen_y, chosen_x) in self.coveredFrontier:
+                        self.coveredFrontier.remove((chosen_y, chosen_x))
+
+                    # Finally, choose to uncover the chosen tile
+                    return Action(AI.Action.UNCOVER, chosen_x, chosen_y)
+
+        # FIFTH RULE OF THUMB: Guess!
+        for y, x in self.coveredFrontier:
             return Action(AI.Action.UNCOVER, x, y)
 
 
-        # Place-holder <----------------- make sure to remove this!
+        # SIXTH RULE OF THUMB: Just leave!
         return Action(AI.Action.LEAVE)
