@@ -218,6 +218,7 @@ class MyAI( AI ):
         # Update the board with the tile we just uncovered
         self.board[self.y][self.x].visited = True if number != -1 else False
         self.board[self.y][self.x].covered = False if number != -1 else True
+
         self.board[self.y][self.x].label = number
 
         # Calculate the amount of covered tiles	
@@ -280,11 +281,12 @@ class MyAI( AI ):
 
         # --------- DEBUG --------------
 
-        print("\nnumber = {}".format(number))
-        print("coveredTiles = {}\nmineTotal = {}".format(self.coveredTiles, self.mineTotal))
-        print("safe ({}): {}".format(len(self.safeToUncover), self.safeToUncover))
-        print("uncovered frontier ({}): {}".format(len(self.uncoveredFrontier), self.uncoveredFrontier))
-        print("covered frontier ({}): {}\n".format(len(self.coveredFrontier), self.coveredFrontier))
+        # print("\nnumber = {}".format(number))
+        # print("coveredTiles = {}\nmineTotal = {}".format(self.coveredTiles, self.mineTotal))
+        # print("safe ({}): {}".format(len(self.safeToUncover), self.safeToUncover))
+        # print("uncovered frontier ({}): {}".format(len(self.uncoveredFrontier), self.uncoveredFrontier))
+        # print("covered frontier ({}): {}\n".format(len(self.coveredFrontier), self.coveredFrontier))
+        
 
         # --------- DEBUG --------------
 
@@ -335,11 +337,10 @@ class MyAI( AI ):
 
         # THIRD RULE OF THUMB: Calculate effective label
         for y, x in self.uncoveredFrontier:
-            
+
             # Calculate the marked neighbor count and effective label of an uncovered frontier tile
             self.board[y][x].markedNeighbors = self.getMarked(y, x)
             self.board[y][x].effectiveLabel = self.board[y][x].label - self.board[y][x].markedNeighbors
-
             # Calculate the unmarked neighbor count of the uncovered frontier tile
             self.board[y][x].unmarkedNeighbors = sum([1 for y3, x3 in self.generateNeighbors(y, x) if not self.board[y3][x3].visited]) - self.board[y][x].markedNeighbors
 
@@ -351,7 +352,6 @@ class MyAI( AI ):
 
                     # Select one of the unvisited tiles
                     if not self.board[y2][x2].visited and not self.board[y2][x2].marked:
-                        
                         self.x = x2
                         self.y = y2
                         return Action(AI.Action.UNCOVER, x2, y2)
@@ -418,20 +418,23 @@ class MyAI( AI ):
                 probabilities = self.calculateProbabilitiesOfConsistentModels(coveredSet, consistentModels)
                 sortedProbabilities = sorted(probabilities.items(), key=(lambda x: x[1]))
 
-                print("sorted probabilities: ", sortedProbabilities)
+                # print("sorted probabilities: ", sortedProbabilities)
 
                 # Iterate through the dict, sorting by ascending probabilities (thus the first element should be of the lowest probability)
                 for tile, probability in sortedProbabilities:
 
                     # Get all the lowest probability tiles, and choose randomly out of them
                     lowestProbabilityTiles = [tile2 for tile2, probability2 in sortedProbabilities if probability2 == probability]
-                    print("lowest tile: ", lowestProbabilityTiles)
+                    # print("lowest tile: ", lowestProbabilityTiles)
                     chosen_y, chosen_x = choice(lowestProbabilityTiles)
-                    print("Hi!")
+                    # print("Hi!")
 
                     # Remove the tile from the covered frontier if it is in there
                     if (chosen_y, chosen_x) in self.coveredFrontier:
                         self.coveredFrontier.remove((chosen_y, chosen_x))
+
+                    self.x = chosen_x
+                    self.y = chosen_y
 
                     # Finally, choose to uncover the chosen tile
                     return Action(AI.Action.UNCOVER, chosen_x, chosen_y)
