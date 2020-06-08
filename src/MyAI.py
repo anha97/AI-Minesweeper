@@ -69,6 +69,9 @@ class MyAI( AI ):
         self.coveredTiles = self.rowDimension * self.colDimension
         self.x = startX
         self.y = startY
+        
+        self.sol = dict()
+        self.invalid = dict()
 
         # Update our board at the first tile
         self.board[self.y][self.x].visited = True
@@ -220,6 +223,7 @@ class MyAI( AI ):
         # Update the board with the tile we just uncovered
         self.board[self.y][self.x].visited = True if number != -1 else False
         self.board[self.y][self.x].covered = False if number != -1 else True
+
         self.board[self.y][self.x].label = number
 
         # Calculate the amount of covered tiles	
@@ -227,6 +231,9 @@ class MyAI( AI ):
 
         # LEAVE if we meet the game condition	
         if self.coveredTiles == self.totalTiles:
+            return Action(AI.Action.LEAVE)
+        
+        if self.flagTotal == self.mineTotal:
             return Action(AI.Action.LEAVE)
 
         # Remove the last uncovered tile from the covered frontier if it was in there
@@ -334,11 +341,10 @@ class MyAI( AI ):
 
         # THIRD RULE OF THUMB: Calculate effective label
         for y, x in self.uncoveredFrontier:
-            
+
             # Calculate the marked neighbor count and effective label of an uncovered frontier tile
             self.board[y][x].markedNeighbors = self.getMarked(y, x)
             self.board[y][x].effectiveLabel = self.board[y][x].label - self.board[y][x].markedNeighbors
-
             # Calculate the unmarked neighbor count of the uncovered frontier tile
             self.board[y][x].unmarkedNeighbors = sum([1 for y3, x3 in self.generateNeighbors(y, x) if not self.board[y3][x3].visited]) - self.board[y][x].markedNeighbors
 
@@ -350,7 +356,6 @@ class MyAI( AI ):
 
                     # Select one of the unvisited tiles
                     if not self.board[y2][x2].visited and not self.board[y2][x2].marked:
-                        
                         self.x = x2
                         self.y = y2
                         return Action(AI.Action.UNCOVER, x2, y2)
